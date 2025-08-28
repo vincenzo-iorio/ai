@@ -1,24 +1,36 @@
 import 'package:flutter/material.dart';
 
+/// Simple model for a chat message.
+/// You can create instances of this from anywhere in your app
+/// and pass them to a MessageBubble to render.
 class ChatMessage {
   final String text;
   final bool isMe;
   final String time;
 
-  ChatMessage({required this.text, required this.isMe, required this.time});
+  const ChatMessage({
+    required this.text,
+    required this.isMe,
+    required this.time,
+  });
 }
 
+/// A single message bubble UI element.
+/// Does not fetch or manage messages — purely visual.
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
-  const MessageBubble({super.key, required this.message});
+
+  const MessageBubble({
+    super.key,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final align = message.isMe
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start;
-    final bg = message.isMe ? Colors.pinkAccent : Colors.cyanAccent;
-    final fg = Colors.black;
+    final isMine = message.isMe;
+    final align = isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final bgColor = isMine ? Colors.pinkAccent : Colors.cyanAccent;
+    const fgColor = Colors.black;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
@@ -29,11 +41,11 @@ class MessageBubble extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 360),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: bg,
+                color: bgColor,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: bg.withOpacity(0.5),
+                    color: bgColor.withOpacity(0.5),
                     blurRadius: 16,
                     spreadRadius: 0.5,
                   ),
@@ -46,8 +58,8 @@ class MessageBubble extends StatelessWidget {
                 ),
                 child: Text(
                   message.text,
-                  style: TextStyle(
-                    color: fg,
+                  style: const TextStyle(
+                    color: fgColor,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.2,
                   ),
@@ -58,7 +70,10 @@ class MessageBubble extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             message.time,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+            ),
           ),
         ],
       ),
