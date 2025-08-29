@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/drawer_menu.dart';
@@ -18,34 +20,79 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _input = TextEditingController();
   final _listController = ScrollController();
+  bool _sending = false;
+
+  // ✅ Mainnet canister ID
+  static const String _icCanisterId = 'mpz3d-aiaaa-aaaac-a4bnq-cai';
 
   @override
   void initState() {
     super.initState();
-
-    // Optionally add a starting message
     if (widget.startWithMessage != null &&
         widget.startWithMessage!.trim().isNotEmpty) {
-      final msg = ChatMessage(
-        text: widget.startWithMessage!,
-        isMe: true,
-        time: _nowTime(),
+      ChannelManager().addMessage(
+        widget.channelName,
+        ChatMessage(
+          text: widget.startWithMessage!,
+          isMe: true,
+          time: _nowTime(),
+        ),
       );
-      ChannelManager().addMessage(widget.channelName, msg);
+    }
+  }
+
+  Future<void> _callMainnetCanister(String userMessage) async {
+    setState(() => _sending = true);
+    try {
+      final url = Uri.parse('https://${_icCanisterId}.icp0.io/chat');
+
+      final payload = {
+        "messages": [
+          {"role": "user", "content": userMessage},
+        ],
+      };
+
+      final resp = await http
+          .post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      debugPrint("📡 POST $url");
+      debugPrint("📡 Status: ${resp.statusCode}");
+      debugPrint("📡 Headers: ${resp.headers}");
+      debugPrint("📡 Body: ${resp.body}");
+
+      if (resp.statusCode == 200) {
+        final replyText = resp.body;
+        ChannelManager().addMessage(
+          widget.channelName,
+          ChatMessage(text: replyText, isMe: false, time: _nowTime()),
+        );
+        _scrollToBottom();
+      } else {
+        debugPrint("❌ Canister error ${resp.statusCode}: ${resp.body}");
+      }
+    } catch (e) {
+      debugPrint("❌ Failed to call IC canister: $e");
+    } finally {
+      setState(() => _sending = false);
     }
   }
 
   void _sendMessage(String text) {
     if (text.isEmpty) return;
 
-    final msg = ChatMessage(text: text, isMe: true, time: _nowTime());
-
-    setState(() {
-      ChannelManager().addMessage(widget.channelName, msg);
-    });
+    ChannelManager().addMessage(
+      widget.channelName,
+      ChatMessage(text: text, isMe: true, time: _nowTime()),
+    );
 
     _input.clear();
     _scrollToBottom();
+    _callMainnetCanister(text);
   }
 
   void _scrollToBottom() {
@@ -99,12 +146,10 @@ class _ChatPageState extends State<ChatPage> {
         elevation: 0,
         title: Text(widget.channelName),
         leading: Builder(
-          builder: (context) {
-            return IconButton(
-              icon: const Icon(Icons.menu, color: Colors.pinkAccent),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            );
-          },
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.pinkAccent),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
         actions: [
           IconButton(
@@ -129,7 +174,6 @@ class _ChatPageState extends State<ChatPage> {
         ),
         child: Column(
           children: [
-            // Message list
             Expanded(
               child: ListView.builder(
                 controller: _listController,
@@ -142,8 +186,6 @@ class _ChatPageState extends State<ChatPage> {
                     MessageBubble(message: messages[index]),
               ),
             ),
-
-            // Input bar
             SafeArea(
               top: false,
               child: Container(
@@ -175,8 +217,7 @@ class _ChatPageState extends State<ChatPage> {
                               controller: _input,
                               style: const TextStyle(color: Colors.cyanAccent),
                               keyboardType: TextInputType.multiline,
-                              textInputAction:
-                                  TextInputAction.newline, // avoid auto "done"
+                              textInputAction: TextInputAction.newline,
                               minLines: 1,
                               maxLines: 3,
                               decoration: const InputDecoration(
@@ -203,11 +244,11 @@ class _ChatPageState extends State<ChatPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {
-                            _sendMessage(_input.text.trim());
-                          },
+                          onPressed: _sending
+                              ? null
+                              : () => _sendMessage(_input.text.trim()),
                           icon: const Icon(Icons.send),
-                          label: const Text("Send"),
+                          label: Text(_sending ? "Sending..." : "Send"),
                         ),
                       ],
                     ),
