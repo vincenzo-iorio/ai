@@ -19,9 +19,7 @@ class CyberpunkApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
-        textTheme: GoogleFonts.orbitronTextTheme(
-          ThemeData.dark().textTheme,
-        ),
+        textTheme: GoogleFonts.orbitronTextTheme(ThemeData.dark().textTheme),
         colorScheme: const ColorScheme.dark(
           primary: Colors.cyanAccent,
           secondary: Colors.pinkAccent,
@@ -30,7 +28,7 @@ class CyberpunkApp extends StatelessWidget {
       home: const LoginPage(),
       routes: {
         '/main': (_) => const MainPage(),
-        '/chat': (_) => const ChatPage(),
+        '/chat': (_) => const ChatPage(channelName: 'General'),
       },
     );
   }

@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/drawer_menu.dart';
+import '../models/chat_message.dart';
+import '../state/channel_manager.dart';
 import 'main_page.dart';
 
 class ChatPage extends StatefulWidget {
+  final String channelName;
   final String? startWithMessage;
 
-  const ChatPage({super.key, this.startWithMessage});
+  const ChatPage({super.key, required this.channelName, this.startWithMessage});
 
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
-  final _messages = <ChatMessage>[];
   final _input = TextEditingController();
   final _listController = ScrollController();
 
@@ -21,29 +23,32 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
 
-    // Optional: start with a message if provided
+    // Optionally add a starting message
     if (widget.startWithMessage != null &&
         widget.startWithMessage!.trim().isNotEmpty) {
-      _messages.add(ChatMessage(
+      final msg = ChatMessage(
         text: widget.startWithMessage!,
         isMe: true,
         time: _nowTime(),
-      ));
+      );
+      ChannelManager().addMessage(widget.channelName, msg);
     }
   }
 
   void _sendMessage(String text) {
     if (text.isEmpty) return;
 
-    final msg = ChatMessage(
-      text: text,
-      isMe: true,
-      time: _nowTime(),
-    );
+    final msg = ChatMessage(text: text, isMe: true, time: _nowTime());
 
-    setState(() => _messages.add(msg));
+    setState(() {
+      ChannelManager().addMessage(widget.channelName, msg);
+    });
+
     _input.clear();
+    _scrollToBottom();
+  }
 
+  void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_listController.hasClients) {
         _listController.animateTo(
@@ -71,20 +76,28 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final messages = ChannelManager().getMessages(widget.channelName);
 
     return Scaffold(
       drawerEdgeDragWidth: 80,
       drawer: DrawerMenu(
         onSelectChannel: (channel) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text("Switched to $channel")));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatPage(
+                channelName: channel,
+                startWithMessage: "Switched to $channel",
+              ),
+            ),
+          );
         },
       ),
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        title: const Text("AI"),
+        title: Text(widget.channelName),
         leading: Builder(
           builder: (context) {
             return IconButton(
@@ -124,9 +137,9 @@ class _ChatPageState extends State<ChatPage> {
                   horizontal: 12,
                   vertical: 16,
                 ),
-                itemCount: _messages.length,
+                itemCount: messages.length,
                 itemBuilder: (context, index) =>
-                    MessageBubble(message: _messages[index]),
+                    MessageBubble(message: messages[index]),
               ),
             ),
 
@@ -157,15 +170,18 @@ class _ChatPageState extends State<ChatPage> {
                                 width: 1.5,
                               ),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: TextField(
                               controller: _input,
                               style: const TextStyle(color: Colors.cyanAccent),
+                              keyboardType: TextInputType.multiline,
+                              textInputAction:
+                                  TextInputAction.newline, // avoid auto "done"
+                              minLines: 1,
+                              maxLines: 3,
                               decoration: const InputDecoration(
                                 hintText: "Type a message...",
-                                hintStyle:
-                                    TextStyle(color: Colors.white54),
+                                hintStyle: TextStyle(color: Colors.white54),
                                 border: InputBorder.none,
                               ),
                               onSubmitted: (value) {
