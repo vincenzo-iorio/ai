@@ -6,6 +6,7 @@ import '../widgets/drawer_menu.dart';
 import '../models/chat_message.dart';
 import '../state/channel_manager.dart';
 import 'main_page.dart';
+import '../main.dart'; // <-- to access AppConfig
 
 class ChatPage extends StatefulWidget {
   final String channelName;
@@ -22,14 +23,12 @@ class _ChatPageState extends State<ChatPage> {
   final _listController = ScrollController();
   bool _sending = false;
 
-  // ✅ Mainnet canister ID
-  static const String _icCanisterId = 'mpz3d-aiaaa-aaaac-a4bnq-cai';
-
   @override
   void initState() {
     super.initState();
     if (widget.startWithMessage != null &&
         widget.startWithMessage!.trim().isNotEmpty) {
+      // Add the initial user message
       ChannelManager().addMessage(
         widget.channelName,
         ChatMessage(
@@ -38,45 +37,53 @@ class _ChatPageState extends State<ChatPage> {
           time: _nowTime(),
         ),
       );
+      // Immediately send it to the LLM
+      _callAzureFoundry(widget.startWithMessage!);
     }
   }
 
-  Future<void> _callMainnetCanister(String userMessage) async {
+  Future<void> _callAzureFoundry(String userMessage) async {
     setState(() => _sending = true);
     try {
-      final url = Uri.parse('https://${_icCanisterId}.icp0.io/chat');
-
-      final payload = {
-        "messages": [
-          {"role": "user", "content": userMessage},
-        ],
-      };
-
-      final resp = await http
-          .post(
-            url,
-            headers: {"Content-Type": "application/json"},
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      debugPrint("📡 POST $url");
-      debugPrint("📡 Status: ${resp.statusCode}");
-      debugPrint("📡 Headers: ${resp.headers}");
-      debugPrint("📡 Body: ${resp.body}");
+      final resp = await http.post(
+        Uri.parse(AppConfig.endpoint),
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": AppConfig.apiKey,
+        },
+        body: jsonEncode({
+          "model": "Phi-4-mini-instruct",
+          "messages": [
+            {
+              "role": "system",
+              "content":
+                  "You are AI, an AI system developed by the cyberpunk Corp Shinkai Systems",
+            },
+            {"role": "user", "content": userMessage},
+          ],
+          "max_tokens": 500,
+          "temperature": 0.8,
+          "top_p": 0.1,
+          "presence_penalty": 0,
+          "frequency_penalty": 0,
+        }),
+      );
 
       if (resp.statusCode == 200) {
-        final replyText = resp.body;
+        final data = jsonDecode(resp.body);
+        final replyText = data["choices"][0]["message"]["content"];
+        debugPrint("Model reply: $replyText");
+
         ChannelManager().addMessage(
           widget.channelName,
           ChatMessage(text: replyText, isMe: false, time: _nowTime()),
         );
         _scrollToBottom();
       } else {
-        debugPrint("❌ Canister error ${resp.statusCode}: ${resp.body}");
+        debugPrint("❌ Azure AI error ${resp.statusCode}: ${resp.body}");
       }
     } catch (e) {
-      debugPrint("❌ Failed to call IC canister: $e");
+      debugPrint("❌ Failed to call Azure AI Foundry: $e");
     } finally {
       setState(() => _sending = false);
     }
@@ -92,7 +99,7 @@ class _ChatPageState extends State<ChatPage> {
 
     _input.clear();
     _scrollToBottom();
-    _callMainnetCanister(text);
+    _callAzureFoundry(text);
   }
 
   void _scrollToBottom() {

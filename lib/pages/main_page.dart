@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'chat_page.dart';
 import '../state/channel_manager.dart';
-import '../models/chat_message.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -25,21 +24,16 @@ class _MainPageState extends State<MainPage> {
   void _sendMessage(String text) {
     if (text.isEmpty) return;
 
-    final msg = ChatMessage(text: text, isMe: true, time: _nowTime());
-
-    ChannelManager().addMessage(newChannelName, msg);
     _input.clear();
 
+    // Navigate to ChatPage and let it handle sending to the LLM
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => ChatPage(channelName: newChannelName)),
+      MaterialPageRoute(
+        builder: (_) =>
+            ChatPage(channelName: newChannelName, startWithMessage: text),
+      ),
     );
-  }
-
-  String _nowTime() {
-    final t = TimeOfDay.now();
-    final mm = t.minute.toString().padLeft(2, '0');
-    return "${t.hour}:$mm";
   }
 
   @override
@@ -117,7 +111,7 @@ class _MainPageState extends State<MainPage> {
 
               const SizedBox(height: 40),
 
-              // Centered input bar (ChatPage style)
+              // Centered input bar
               Container(
                 padding: EdgeInsets.all(isMobile ? 6 : 8),
                 decoration: BoxDecoration(
