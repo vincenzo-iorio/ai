@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:flutter_highlight/themes/github.dart'; // 👈 default theme
 import '../models/chat_message.dart';
-import '../themes/shinkai_neon_theme.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -11,8 +11,8 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMine = message.isMe;
     final bubbleColor = isMine
-        ? Colors.pinkAccent.withOpacity(0.15)
-        : Colors.cyanAccent.withOpacity(0.15);
+        ? Colors.pinkAccent
+        : const Color.fromARGB(255, 24, 116, 255);
 
     final segments = _parseMessage(message.text);
 
@@ -24,7 +24,6 @@ class MessageBubble extends StatelessWidget {
             : MainAxisAlignment.start,
         children: [
           Flexible(
-            // prevents overflow
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.9,
@@ -60,7 +59,7 @@ class MessageBubble extends StatelessWidget {
                             child: HighlightView(
                               seg['content'] ?? '',
                               language: seg['lang'] ?? 'plaintext',
-                              theme: shinkaiNeonTheme,
+                              theme: githubTheme, // 👈 default theme here
                               padding: const EdgeInsets.all(8),
                               textStyle: const TextStyle(
                                 fontFamily: 'SourceCodePro',
@@ -72,10 +71,14 @@ class MessageBubble extends StatelessWidget {
                       } else {
                         return SelectableText(
                           seg['content'] ?? '',
-                          softWrap: true,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+                          maxLines: null,
+                          textAlign: TextAlign.start,
+                          textWidthBasis: TextWidthBasis.parent,
+                          style: TextStyle(
+                            color: isMine
+                                ? Colors.cyanAccent
+                                : Colors.pinkAccent,
+                            fontWeight: FontWeight.bold,
                             letterSpacing: 0.2,
                           ),
                         );
@@ -91,7 +94,6 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  /// Splits the message into text and code segments
   List<Map<String, String>> _parseMessage(String text) {
     final segments = <Map<String, String>>[];
     final regex = RegExp(r'```([\w+-]*)\n([\s\S]*?)```', multiLine: true);
@@ -107,11 +109,7 @@ class MessageBubble extends StatelessWidget {
 
       final lang = match.group(1)?.trim() ?? 'plaintext';
       final code = match.group(2)?.trim() ?? '';
-      segments.add({
-        'type': 'code',
-        'lang': lang.isEmpty ? 'plaintext' : lang,
-        'content': code,
-      });
+      segments.add({'type': 'code', 'lang': lang, 'content': code});
 
       lastIndex = match.end;
     }
