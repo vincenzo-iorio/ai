@@ -1,0 +1,16 @@
+{
+  "name": "ai",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "clean": "git clean -xfd && git reset --hard",
+    "typecheck": "tsc -b packages/shared",
+    "dev:web": "yarn workspace mobile start" 
+  },
+  "resolutions": {
+    "metro": "0.82.5"
+  }
+}
