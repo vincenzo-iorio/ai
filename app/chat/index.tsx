@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HeaderHeightContext } from './_layout';
+import { sendChat } from '../../src/services/icp/chatService'; // usa il tuo service
 
 interface Message {
   id: string;
@@ -28,25 +29,43 @@ export default function ChatPage() {
   const flatListRef = useRef<FlatList>(null);
 
   const headerHeight = useContext(HeaderHeightContext);
-  const insets = useSafeAreaInsets(); // 👈 per il padding inferiore
+  const insets = useSafeAreaInsets();
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!input.trim()) return;
-    const newMessage: Message = {
+
+    // Messaggio utente
+    const userMsg: Message = {
       id: Date.now().toString(),
       text: input,
       sender: 'me',
     };
-    setMessages(prev => [newMessage, ...prev]);
+    setMessages(prev => [userMsg, ...prev]);
     setInput('');
 
-    // Simula risposta bot
-    setTimeout(() => {
+    // Placeholder "Thinking..."
+    const thinkingId = `${Date.now()}-thinking`;
+    setMessages(prev => [
+      { id: thinkingId, text: 'Thinking...', sender: 'bot' },
+      ...prev,
+    ]);
+
+    try {
+      // Chiamata al canister
+      const answer = await sendChat([{ role: 'user', content: userMsg.text }]);
+
+      // Rimuovi placeholder e aggiungi risposta
       setMessages(prev => [
-        { id: Date.now().toString(), text: 'Neon wisdom coming your way…', sender: 'bot' },
-        ...prev,
+        { id: Date.now().toString(), text: answer, sender: 'bot' },
+        ...prev.filter(m => m.id !== thinkingId),
       ]);
-    }, 800);
+    } catch (err) {
+      console.error('Errore chiamando il canister:', err);
+      setMessages(prev => [
+        { id: Date.now().toString(), text: 'Errore di connessione', sender: 'bot' },
+        ...prev.filter(m => m.id !== thinkingId),
+      ]);
+    }
   };
 
   const renderItem = ({ item }: { item: Message }) => (
@@ -65,7 +84,7 @@ export default function ChatPage() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={headerHeight} // 👈 offset dinamico
+        keyboardVerticalOffset={headerHeight}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>

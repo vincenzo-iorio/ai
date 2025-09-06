@@ -1,3 +1,11 @@
+// Polyfill Node globals per far funzionare @dfinity/agent su mobile
+import 'react-native-get-random-values';
+import { Buffer } from 'buffer';
+import process from 'process';
+
+(global as any).Buffer = Buffer;
+(global as any).process = process;
+
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../lib/useAuth';
 
