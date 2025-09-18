@@ -8,9 +8,15 @@ import process from 'process';
 
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../lib/useAuth';
+import { Redirect } from 'expo-router';
 
 export default function Home() {
   const { user, logout } = useAuth();
+
+  // 👇 if not authenticated, send user to login
+  if (!user) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <View style={styles.container}>
