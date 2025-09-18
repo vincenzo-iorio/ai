@@ -1,19 +1,17 @@
 import { useContext, useRef, useState } from 'react';
 import {
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HeaderHeightContext } from './_layout';
-import { sendChat } from '../../src/services/icp/chatService'; // usa il tuo service
+import { sendChat } from '../../src/services/icp/chatService';
 
 interface Message {
   id: string;
@@ -23,7 +21,7 @@ interface Message {
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Welcome to NEON Q&A — ask me anything…', sender: 'bot' },
+    { id: '1', text: 'Welcome to Shinkai, I am AI — ask me anything…', sender: 'bot' },
   ]);
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
@@ -34,7 +32,6 @@ export default function ChatPage() {
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    // Messaggio utente
     const userMsg: Message = {
       id: Date.now().toString(),
       text: input,
@@ -43,7 +40,6 @@ export default function ChatPage() {
     setMessages(prev => [userMsg, ...prev]);
     setInput('');
 
-    // Placeholder "Thinking..."
     const thinkingId = `${Date.now()}-thinking`;
     setMessages(prev => [
       { id: thinkingId, text: 'Thinking...', sender: 'bot' },
@@ -51,10 +47,7 @@ export default function ChatPage() {
     ]);
 
     try {
-      // Chiamata al canister
       const answer = await sendChat([{ role: 'user', content: userMsg.text }]);
-
-      // Rimuovi placeholder e aggiungi risposta
       setMessages(prev => [
         { id: Date.now().toString(), text: answer, sender: 'bot' },
         ...prev.filter(m => m.id !== thinkingId),
@@ -86,34 +79,32 @@ export default function ChatPage() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={headerHeight}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{ flex: 1 }}>
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderItem}
-              keyExtractor={item => item.id}
-              contentContainerStyle={styles.chatContainer}
-              inverted
-              showsVerticalScrollIndicator={false}
-            />
+        <View style={{ flex: 1 }}>
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.chatContainer}
+            inverted
+            showsVerticalScrollIndicator={false}
+          />
 
-            <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
-              <TextInput
-                style={styles.input}
-                placeholder="Type your question..."
-                placeholderTextColor="#ff00ff"
-                value={input}
-                onChangeText={setInput}
-                returnKeyType="send"
-                onSubmitEditing={sendMessage}
-              />
-              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-                <Text style={styles.sendText}>➤</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type your question..."
+              placeholderTextColor="#ff00ff"
+              value={input}
+              onChangeText={setInput}
+              returnKeyType="send"
+              onSubmitEditing={sendMessage}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+              <Text style={styles.sendText}>➤</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
