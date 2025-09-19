@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sendChat } from '../src/services/icp/chatService';
+import { useAuth } from '../src/auth/AuthContext';
 
 export interface Message {
   id: string;
@@ -10,15 +11,13 @@ export interface Message {
   timestamp: number; // ms
 }
 
-const STORAGE_KEY = 'chat_messages_v2'; // bump key to avoid old bad data
-
 function normalizeMessages(raw: any[]): Message[] {
   return (raw ?? []).map((m, idx) => {
     const numericTs =
       typeof m?.timestamp === 'number'
         ? m.timestamp
-        : Number(m?.timestamp) || // handle string timestamps
-          (Number(m?.id) || Date.now()) - idx; // try id as ts, fallback to now
+        : Number(m?.timestamp) ||
+          (Number(m?.id) || Date.now()) - idx;
     return {
       id: String(m?.id ?? Date.now() + '-' + idx),
       text: String(m?.text ?? ''),
@@ -29,13 +28,19 @@ function normalizeMessages(raw: any[]): Message[] {
 }
 
 export function useChat() {
+  const { principal, identity } = useAuth(); // principal può essere undefined se anonimo
+  const storageKey = principal
+    ? `chat_messages_${principal}`
+    : 'chat_messages_anon';
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Carica messaggi quando cambia utente
   useEffect(() => {
     (async () => {
       try {
-        const json = await AsyncStorage.getItem(STORAGE_KEY);
+        const json = await AsyncStorage.getItem(storageKey);
         if (json) {
           const parsed = JSON.parse(json);
           const normalized = normalizeMessages(parsed);
@@ -45,7 +50,7 @@ export function useChat() {
               : [
                   {
                     id: 'welcome',
-                    text: 'Welcome to Shinkai, I am AI — ask me anything…',
+                    text: 'Welcome to LainCorp, I am Lain',
                     sender: 'bot',
                     timestamp: Date.now(),
                   },
@@ -55,7 +60,7 @@ export function useChat() {
           setMessages([
             {
               id: 'welcome',
-              text: 'Welcome to Shinkai, I am AI — ask me anything…',
+              text: 'Welcome to LainCorp, I am Lain',
               sender: 'bot',
               timestamp: Date.now(),
             },
@@ -66,20 +71,21 @@ export function useChat() {
         setMessages([
           {
             id: 'welcome',
-            text: 'Welcome to Shinkai, I am AI — ask me anything…',
+            text: 'Welcome to LainCorp, I am Lain',
             sender: 'bot',
             timestamp: Date.now(),
           },
         ]);
       }
     })();
-  }, []);
+  }, [storageKey]);
 
+  // Salva messaggi ogni volta che cambiano
   useEffect(() => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages)).catch(err =>
+    AsyncStorage.setItem(storageKey, JSON.stringify(messages)).catch(err =>
       console.warn('Failed to save messages:', err)
     );
-  }, [messages]);
+  }, [messages, storageKey]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -93,7 +99,7 @@ export function useChat() {
     setLoading(true);
 
     try {
-      const answer = await sendChat([{ role: 'user', content: text }]);
+      const answer = await sendChat([{ role: 'user', content: text }], identity);
       const botMsg: Message = { id: String(Date.now()), text: answer, sender: 'bot', timestamp: Date.now() };
       setMessages(prev => [botMsg, ...prev.filter(m => m.id !== thinkingId)]);
     } catch (err) {
@@ -109,11 +115,11 @@ export function useChat() {
 
   const clearMessages = async () => {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await AsyncStorage.removeItem(storageKey);
       setMessages([
         {
           id: 'welcome',
-          text: 'Welcome to Shinkai, I am AI — ask me anything…',
+          text: 'Welcome to LainCorp, I am Lain',
           sender: 'bot',
           timestamp: Date.now(),
         },

@@ -48,3 +48,17 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+TO DO
+
+5️⃣ When syncing to backend
+Later, when you implement persistence on the backend:
+
+Send the principal as the auth key (signed requests via your II identity).
+
+Send the local data (chat history, profile, etc.) from AsyncStorage.
+
+The backend can verify the signature and store it under that principal.
+
+💡 Best practice: Keep all user‑specific keys prefixed with principal so there’s zero risk of mixing data between accounts.

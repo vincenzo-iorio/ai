@@ -1,15 +1,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useAuth } from '../../lib/useAuth';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../../src/auth/AuthContext';
+import LoginWebView from '../../src/auth/LoginWebView';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, principal } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState('');
 
-  // Animated shimmer overlay
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -21,21 +20,19 @@ export default function Login() {
     ).start();
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('../chat');
+    }
+  }, [isAuthenticated]);
+
   const shimmerOpacity = shimmerAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0.05, 0.15],
   });
 
-  const handleLogin = () => {
-    if (username.trim()) {
-      login({ name: username });
-      router.replace('../chat');
-    }
-  };
-
   return (
     <View style={styles.background}>
-      {/* Neon gradient background */}
       <LinearGradient
         colors={['#0a0a0a', '#1a0033', '#0a0a0a']}
         style={StyleSheet.absoluteFill}
@@ -43,7 +40,6 @@ export default function Login() {
         end={{ x: 1, y: 1 }}
       />
 
-      {/* Animated shimmer overlay */}
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
@@ -53,17 +49,20 @@ export default function Login() {
 
       <View style={styles.container}>
         <Text style={styles.title}>NEON Q&A</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your handle"
-          placeholderTextColor="#ff00ff"
-          value={username}
-          onChangeText={setUsername}
-        />
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>ENTER</Text>
+
+        <TouchableOpacity style={styles.button} onPress={login}>
+          <Text style={styles.buttonText}>Login with Internet Identity</Text>
         </TouchableOpacity>
+
+        {principal && (
+          <Text style={styles.principal} numberOfLines={1}>
+            {principal}
+          </Text>
+        )}
       </View>
+
+      {/* WebView per il login II */}
+      <LoginWebView />
     </View>
   );
 }
@@ -82,16 +81,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 2,
   },
-  input: {
-    borderWidth: 2,
-    borderColor: '#ff00ff',
-    padding: 12,
-    borderRadius: 8,
-    color: '#fff',
-    marginBottom: 20,
-    textShadowColor: '#ff00ff',
-    textShadowRadius: 5,
-  },
   button: {
     backgroundColor: 'transparent',
     borderWidth: 2,
@@ -109,5 +98,11 @@ const styles = StyleSheet.create({
     textShadowColor: '#00f0ff',
     textShadowRadius: 5,
     letterSpacing: 1,
+  },
+  principal: {
+    color: '#ff00ff',
+    fontSize: 12,
+    marginTop: 10,
+    textAlign: 'center',
   },
 });
