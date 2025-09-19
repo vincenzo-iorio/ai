@@ -16,6 +16,7 @@
     "@dfinity/identity": "^3.2.6",
     "@dfinity/identity-secp256k1": "^3.2.6",
     "@dfinity/principal": "^3.2.6",
+    "@expo/ngrok": "^4.1.3",
     "@expo/vector-icons": "^14.1.0",
     "@icp-sdk/core": "^4.0.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
