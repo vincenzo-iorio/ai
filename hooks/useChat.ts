@@ -28,7 +28,7 @@ function normalizeMessages(raw: any[]): Message[] {
 }
 
 export function useChat() {
-  const { principal, identity } = useAuth(); // principal può essere undefined se anonimo
+  const { principal, identity } = useAuth();
   const storageKey = principal
     ? `chat_messages_${principal}`
     : 'chat_messages_anon';
@@ -95,12 +95,35 @@ export function useChat() {
     const thinkingId = `${now}-thinking`;
     const thinkingMsg: Message = { id: thinkingId, text: 'Thinking...', sender: 'bot', timestamp: now };
 
+    // Aggiorna subito lo stato locale
     setMessages(prev => [thinkingMsg, userMsg, ...prev]);
     setLoading(true);
 
     try {
-      const answer = await sendChat([{ role: 'user', content: text }], identity);
-      const botMsg: Message = { id: String(Date.now()), text: answer, sender: 'bot', timestamp: Date.now() };
+      // Costruisci la conversazione completa in ordine cronologico
+      const conversationChrono = [...[userMsg], ...messages]
+        .slice()
+        .reverse()
+        .map(m => ({
+          role: m.sender === 'me' ? 'user' : 'assistant',
+          content: m.text,
+        }));
+
+      // (Opzionale) aggiungi un system prompt all'inizio
+      // conversationChrono.unshift({
+      //   role: 'system',
+      //   content: 'You are Lain, an AI assistant. Answer concisely and helpfully.',
+      // });
+
+      // Invia tutta la conversazione al canister
+      const answer = await sendChat(conversationChrono, identity);
+
+      const botMsg: Message = {
+        id: String(Date.now()),
+        text: answer,
+        sender: 'bot',
+        timestamp: Date.now(),
+      };
       setMessages(prev => [botMsg, ...prev.filter(m => m.id !== thinkingId)]);
     } catch (err) {
       console.error('Canister error:', err);
