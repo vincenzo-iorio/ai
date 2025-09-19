@@ -54,7 +54,7 @@ export default function ChatLayout() {
             <View style={styles.menuLine} />
             <View style={styles.menuLine} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>AI</Text>
+          <Text style={styles.headerTitle}>LAIN AI</Text>
           <View style={{ width: 32 }} />
         </View>
 
